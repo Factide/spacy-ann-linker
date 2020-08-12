@@ -10,6 +10,7 @@ from spacy.kb import KnowledgeBase
 from spacy_ann.candidate_generator import CandidateGenerator
 from wasabi import Printer
 from tqdm import tqdm
+from itertools import tee
 
 INPUT_DIM = 300  # dimension of pretrained input vectors
 DESC_WIDTH = 300  # dimension of output entity vectors
@@ -55,45 +56,24 @@ def create_index(
         if not output_dir.exists():
             output_dir.mkdir(parents=True)
 
-    entities = list(srsly.read_jsonl(kb_dir / "entities.jsonl"))
-    aliases = list(srsly.read_jsonl(kb_dir / "aliases.jsonl"))
+    entities = srsly.read_jsonl(kb_dir / "entities.jsonl")
+    total_entities = sum(1 for _ in tee(entities))
+    
+    aliases = srsly.read_jsonl(kb_dir / "aliases.jsonl")
+    total_aliases = sum(1 for _ in tee(aliases))
+
     kb = KnowledgeBase(vocab=nlp.vocab, entity_vector_length=INPUT_DIM)
 
-    # set up the data
-    entity_ids = []
-    descriptions = []
-    freqs = []
-    for e in entities:
-        entity_ids.append(e["id"])
-        descriptions.append(e.get("description", ""))
-        freqs.append(100)
-
-    # msg.divider("Train EntityEncoder")
-
-    # with msg.loading("Starting training EntityEncoder"):
-    #     # training entity description encodings
-    #     # this part can easily be replaced with a custom entity encoder
-    #     encoder = EntityEncoder(nlp=nlp, input_dim=INPUT_DIM, desc_width=DESC_WIDTH, epochs=n_iter)
-    #     encoder.train(description_list=descriptions, to_print=True)
-    #     msg.good("Done Training")
-
-    msg.divider("Apply EntityEncoder")
-
-    # with msg.loading("Applying EntityEncoder to descriptions"):
-        # get the pretrained entity vectors
     empty_doc = nlp.make_doc('').vector
-    embeddings = [nlp.make_doc(desc).vector if desc else empty_doc
-                  for desc in tqdm(descriptions, desc='Applying EntityEncoder to descriptions')]
-    # msg.good("Finished, embeddings created")
+    embeddings = [nlp.make_doc(entity['description']).vector if entity['description'] else empty_doc
+                  for entity in tqdm(entities, desc='Applying EntityEncoder to descriptions', total=total_entities)]
 
-    # with msg.loading("Setting kb entities and aliases"):
-        # set the entities, can also be done by calling `kb.add_entity` for each entity
     for i in tqdm(range(len(entity_ids)), desc='Adding entities'):
         entity = entity_ids[i]
         if not kb.contains_entity(entity):
-            kb.add_entity(entity, freqs[i], embeddings[i])
-
-    for a in tqdm(aliases, desc="Setting kb entities and aliases"):
+            kb.add_entity(entity, 100, embeddings[i])
+            
+    for a in tqdm(aliases, desc="Setting kb entities and aliases", total=total_aliases):
         ents = [e for e in a["entities"] if kb.contains_entity(e)]
         n_ents = len(ents)
         if n_ents > 0:
