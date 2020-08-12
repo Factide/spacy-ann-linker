@@ -56,11 +56,11 @@ def create_index(
         if not output_dir.exists():
             output_dir.mkdir(parents=True)
 
-    entities = srsly.read_jsonl(kb_dir / "entities.jsonl")
-    total_entities = sum(1 for _ in tee(entities))
+    entities, entities_copy = tee(srsly.read_jsonl(kb_dir / "entities.jsonl"))
+    total_entities = sum(1 for _ in entities_copy)
     
-    aliases = srsly.read_jsonl(kb_dir / "aliases.jsonl")
-    total_aliases = sum(1 for _ in tee(aliases))
+    aliases, aliases_copy = tee(srsly.read_jsonl(kb_dir / "aliases.jsonl"))
+    total_aliases = sum(1 for _ in aliases_copy)
 
     kb = KnowledgeBase(vocab=nlp.vocab, entity_vector_length=INPUT_DIM)
 
