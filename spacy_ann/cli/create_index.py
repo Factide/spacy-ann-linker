@@ -65,7 +65,7 @@ def create_index(
     kb = KnowledgeBase(vocab=nlp.vocab, entity_vector_length=INPUT_DIM)
 
     empty_doc = nlp.make_doc('').vector
-    embeddings = [nlp.make_doc(entity['description']).vector if entity['description'] else empty_doc
+    embeddings = [nlp.make_doc(entity['description']).vector if 'description' in entity else empty_doc
                   for entity in tqdm(entities, desc='Applying EntityEncoder to descriptions', total=total_entities)]
 
     for i in tqdm(range(len(entity_ids)), desc='Adding entities'):
