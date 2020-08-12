@@ -9,6 +9,7 @@ import typer
 from spacy.kb import KnowledgeBase
 from spacy_ann.candidate_generator import CandidateGenerator
 from wasabi import Printer
+from tqdm import tqdm
 
 INPUT_DIM = 300  # dimension of pretrained input vectors
 DESC_WIDTH = 300  # dimension of output entity vectors
@@ -78,26 +79,28 @@ def create_index(
 
     msg.divider("Apply EntityEncoder")
 
-    with msg.loading("Applying EntityEncoder to descriptions"):
+    # with msg.loading("Applying EntityEncoder to descriptions"):
         # get the pretrained entity vectors
-        embeddings = [nlp.make_doc(desc).vector for desc in descriptions]
-        msg.good("Finished, embeddings created")
+    empty_doc = nlp.make_doc('').vector
+    embeddings = [nlp.make_doc(desc).vector if desc else empty_doc
+                  for desc in tqdm(descriptions, desc='Applying EntityEncoder to descriptions')]
+    # msg.good("Finished, embeddings created")
 
-    with msg.loading("Setting kb entities and aliases"):
+    # with msg.loading("Setting kb entities and aliases"):
         # set the entities, can also be done by calling `kb.add_entity` for each entity
-        for i in range(len(entity_ids)):
-            entity = entity_ids[i]
-            if not kb.contains_entity(entity):
-                kb.add_entity(entity, freqs[i], embeddings[i])
+    for i in tqdm(range(len(entity_ids)), desc='Adding entities'):
+        entity = entity_ids[i]
+        if not kb.contains_entity(entity):
+            kb.add_entity(entity, freqs[i], embeddings[i])
 
-        for a in aliases:
-            ents = [e for e in a["entities"] if kb.contains_entity(e)]
-            n_ents = len(ents)
-            if n_ents > 0:
-                prior_prob = [1.0 / n_ents] * n_ents
-                kb.add_alias(alias=a["alias"], entities=ents, probabilities=prior_prob)
+    for a in tqdm(aliases, desc="Setting kb entities and aliases"):
+        ents = [e for e in a["entities"] if kb.contains_entity(e)]
+        n_ents = len(ents)
+        if n_ents > 0:
+            prior_prob = [1.0 / n_ents] * n_ents
+            kb.add_alias(alias=a["alias"], entities=ents, probabilities=prior_prob)
 
-        msg.good("Done adding entities and aliases to kb")
+        # msg.good("Done adding entities and aliases to kb")
 
     msg.divider("Create ANN Index")
 
