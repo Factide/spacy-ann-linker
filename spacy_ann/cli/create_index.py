@@ -65,13 +65,12 @@ def create_index(
     kb = KnowledgeBase(vocab=nlp.vocab, entity_vector_length=INPUT_DIM)
 
     empty_doc = nlp.make_doc('').vector
-    embeddings = [nlp.make_doc(entity['description']).vector if 'description' in entity else empty_doc
-                  for entity in tqdm(entities, desc='Applying EntityEncoder to descriptions', total=total_entities)]
 
-    for i in tqdm(range(len(entity_ids)), desc='Adding entities'):
-        entity = entity_ids[i]
-        if not kb.contains_entity(entity):
-            kb.add_entity(entity, 100, embeddings[i])
+    for entity in tqdm(entities, desc='Adding entities to KB', total=total_entities):
+        id = entity['id']
+        if not kb.contains_entity(id):
+            embedding = nlp.make_doc(entity['description']).vector if 'description' in entity else empty_doc
+            kb.add_entity(id, 100, embedding)
             
     for a in tqdm(aliases, desc="Setting kb entities and aliases", total=total_aliases):
         ents = [e for e in a["entities"] if kb.contains_entity(e)]
@@ -83,8 +82,8 @@ def create_index(
         # msg.good("Done adding entities and aliases to kb")
 
     msg.divider("Create ANN Index")
-
-    cg = CandidateGenerator().fit(kb.get_alias_strings(), verbose=True)
+    alias_strings = kb.get_alias_strings()
+    cg = CandidateGenerator().fit(alias_strings, verbose=True)
 
     ann_linker = nlp.create_pipe("ann_linker")
     ann_linker.set_kb(kb)
