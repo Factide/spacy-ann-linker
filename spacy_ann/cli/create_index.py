@@ -72,12 +72,12 @@ def create_index(
             embedding = nlp.make_doc(entity['description']).vector if 'description' in entity else empty_doc
             kb.add_entity(id, 100, embedding)
             
-    for a in tqdm(aliases, desc="Setting kb entities and aliases", total=total_aliases):
-        ents = [e for e in a["entities"] if kb.contains_entity(e)]
-        n_ents = len(ents)
-        if n_ents > 0:
-            prior_prob = [1.0 / n_ents] * n_ents
-            kb.add_alias(alias=a["alias"], entities=ents, probabilities=prior_prob)
+    for alias in tqdm(aliases, desc="Setting kb entities and aliases", total=total_aliases):
+        entities = [e for e in alias["entities"] if kb.contains_entity(e)]
+        num_entities = len(entities)
+        if num_entities > 0:
+            prior_probabilities = alias['probabilities'] if len(alias['probabilities']) == num_entities else [1.0 / num_entities] * num_entities
+            kb.add_alias(alias=alias["alias"], entities=entities, probabilities=prior_probabilities)
 
         # msg.good("Done adding entities and aliases to kb")
 
