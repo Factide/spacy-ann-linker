@@ -8,6 +8,7 @@ import srsly
 import typer
 from spacy.kb import KnowledgeBase
 from spacy_ann.candidate_generator import CandidateGenerator
+from spacy_ann.types import kb_type_vs_index
 from wasabi import Printer
 from tqdm import tqdm
 from itertools import tee
@@ -70,7 +71,11 @@ def create_index(
         id = entity['id']
         if not kb.contains_entity(id):
             embedding = nlp.make_doc(entity['description']).vector if 'description' in entity else empty_doc
-            kb.add_entity(id, 100, embedding)
+            label = entity['label'] if 'label' in entity else 0
+            if label: label = kb_type_vs_index[label]
+            kb.add_entity(entity=id, 
+                          freq=label, #TODO: Add a proper "label" field (repurposed freq field as the type label)
+                          entity_vector=embedding) 
             
     for alias in tqdm(aliases, desc="Setting kb entities and aliases", total=total_aliases):
         entities = [e for e in alias["entities"] if kb.contains_entity(e)]
@@ -78,8 +83,6 @@ def create_index(
         if num_entities > 0:
             prior_probabilities = alias['probabilities'] if len(alias['probabilities']) == num_entities else [1.0 / num_entities] * num_entities
             kb.add_alias(alias=alias["alias"], entities=entities, probabilities=prior_probabilities)
-
-        # msg.good("Done adding entities and aliases to kb")
 
     msg.divider("Create ANN Index")
     alias_strings = kb.get_alias_strings()

@@ -11,7 +11,7 @@ from spacy.kb import KnowledgeBase
 from spacy.language import component
 from spacy.tokens import Doc, Span
 from spacy_ann.candidate_generator import CandidateGenerator
-from spacy_ann.types import KnowledgeBaseCandidate
+from spacy_ann.types import KnowledgeBaseCandidate, index_vs_kb_type
 
 
 @component(
@@ -108,15 +108,22 @@ class AnnLinker:
                     sims = np.dot(entity_encodings, doc.vector.T) / (
                         (candidate_norm * doc.vector_norm) + 1e-8
                     )
+
+                    priors = np.asarray([c.prior_prob for c in kb_candidates])
+
+                    types = [index_vs_kb_type[c.entity_freq] for c in kb_candidates]
+                    type_score = np.asarray([2.0 if t == ent.label_ else 1.0 for t in types])
+
                     ent._.kb_candidates = [
                         KnowledgeBaseCandidate(
-                            entity=cand.entity_, context_similarity=sim
+                            entity=cand.entity_, context_similarity=sim, prior_probability=cand.prior_prob, type_label=index_vs_kb_type[cand.entity_freq]
                         )
                         for cand, sim in zip(kb_candidates, sims)
                     ]
 
+                    score = np.multiply(np.multiply(priors, sims), type_score)            
                     # TODO: Add thresholding here
-                    best_candidate = kb_candidates[np.argmax(sims)]
+                    best_candidate = kb_candidates[np.argmax(score)]
                     for t in ent:
                         t.ent_kb_id = best_candidate.entity
 

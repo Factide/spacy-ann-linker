@@ -16,3 +16,13 @@ class AliasCandidate(BaseModel):
 class KnowledgeBaseCandidate(BaseModel):
     entity: str
     context_similarity: float
+    prior_probability: float
+    type_label: str
+
+index_vs_kb_type = {
+    0: 'UNK',
+    1: 'ORG',
+    2: 'GPE',
+    3: 'PERSON'
+}
+kb_type_vs_index = {value: key for key, value in index_vs_kb_type.items()}
