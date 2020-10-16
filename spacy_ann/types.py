@@ -23,6 +23,7 @@ index_vs_kb_type = {
     0: 'UNK',
     1: 'ORG',
     2: 'GPE',
-    3: 'PERSON'
+    3: 'PERSON',
+    100: 'UNK'
 }
 kb_type_vs_index = {value: key for key, value in index_vs_kb_type.items()}
